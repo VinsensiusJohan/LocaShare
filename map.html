@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map</title>
+
+    <script src="app.js" type="module" defer></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+
+     <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+
+    <style>
+        #map { height: 500px; }
+    </style>
+
+</head>
+<body>
+    <h1>User Location</h1>
+    <div id="map"></div>
+    <div id="lat"></div>
+    <div id="lng"></div>
+    <div id="acc"></div>
+
+    <button id="add_friend">Add Friend</button>
+
+</body>
+<script type="module">
+    import {Update_Location_User} from './app.js';
+    const username = sessionStorage.getItem("username");
+
+    var map = L.map('map');
+    map.setView([51.505, -0.09], 13);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    navigator.geolocation.watchPosition(success, error, {
+        enableHighAccuracy: true,  // Pastikan menggunakan akurasi tinggi
+        timeout: 10000,            // Waktu batas 10 detik
+        maximumAge: 0              // Jangan gunakan cache
+    });
+
+    let marker, circle, zoomed;
+    let lastSavedTime = 0;
+
+    function success(pos){
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy;
+
+        let acc_m = accuracy.toFixed(2);
+
+        document.getElementById("lat").innerHTML = "Latitude  : " + lat + "°";
+        document.getElementById("lng").innerHTML = "Longitude : " + lng + "°";
+        document.getElementById("acc").innerHTML = "Akurasi   : " + acc_m + " meter";
+
+        const current_time = Date.now();
+        let date = new Date(current_time);
+
+        let formattedDateISO = date.toLocaleString('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).replace(/\//g, '-').replace(', ', ' ');      
+
+        if(current_time - lastSavedTime >= 60000){
+            //Update_Location_User(lat, lng, formattedDateISO, username);
+            lastSavedTime = current_time;
+        }
+
+        if(marker){
+            map.removeLayer(marker);
+            map.removeLayer(circle);
+        }
+
+        marker = L.marker([lat, lng], {alt:'Anda'}).addTo(map).bindPopup('Lokasi anda saat ini');
+        circle = L.circle([lat, lng], {radius: accuracy}).addTo(map);
+
+        if(!zoomed){
+            zoomed = map.fitBounds(circle.getBounds());
+        }
+
+        map.setView([lat,lng]);
+    }
+
+    function error(err){
+        if (err.code === 1){
+            alert("Silahkan nyalakan lokasi anda");
+        }else{
+            alert("Tidak dapat mengambil lokasi saat ini");
+        }
+    }
+
+</script>
+</html>
