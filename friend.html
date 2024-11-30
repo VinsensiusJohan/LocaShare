@@ -9,8 +9,15 @@
     <h1>Silahkan cari teman anda</h1>
     <label>Username : </label>
     <input type="text" id="nama_teman" placeholder="Nama teman anda">
+
     <button id="cari">Cari Teman</button>
     <br><br>
     <button id="back">Kembali</button>
+
+    <script type="module">
+        import {Back_To_Map} from './app.js';
+        const username = sessionStorage.getItem("username");
+        console.log(username);
+    </script>
 </body>
 </html>

@@ -17,12 +17,12 @@
     crossorigin=""></script>
 
     <style>
-        #map { height: 500px; }
+        #map { height: 600px; }
     </style>
 
 </head>
 <body>
-    <h1>User Location</h1>
+    <h1 id="header">User Location</h1>
     <div id="map"></div>
     <div id="lat"></div>
     <div id="lng"></div>
@@ -30,10 +30,16 @@
 
     <button id="add_friend">Add Friend</button>
 
+    <br><br>
+    <button id="logout">Logout</button>
+
 </body>
 <script type="module">
-    import {Update_Location_User} from './app.js';
+    import { Update_Location_User, getFriendsLocation } from './app.js';
+
     const username = sessionStorage.getItem("username");
+
+    document.getElementById("header").innerText = username + " Location";
 
     var map = L.map('map');
     map.setView([51.505, -0.09], 13);
@@ -43,16 +49,33 @@
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    navigator.geolocation.watchPosition(success, error, {
-        enableHighAccuracy: true,  // Pastikan menggunakan akurasi tinggi
-        timeout: 10000,            // Waktu batas 10 detik
-        maximumAge: 0              // Jangan gunakan cache
-    });
-
-    let marker, circle, zoomed;
+    // Variable untuk menyimpan watchID
+    let watchID;
+    let userMarker, userCircle, zoomed;
     let lastSavedTime = 0;
+    let friendMarkers = []; // Array untuk menyimpan marker teman
 
-    function success(pos){
+    // Fungsi untuk memulai geolokasi tracking
+    function startGeolocationTracking() {
+        watchID = navigator.geolocation.watchPosition(success, error, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        });
+    }
+
+    // Fungsi untuk menghentikan geolokasi tracking
+    function stopGeolocationTracking() {
+        if (watchID) {
+            navigator.geolocation.clearWatch(watchID);
+            sessionStorage.clear();
+            window.location.href = "index.html";
+            console.log("Pelacakan lokasi dihentikan.");
+        }
+    }
+
+    // Fungsi untuk meng-update lokasi pengguna
+    function success(pos) {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const accuracy = pos.coords.accuracy;
@@ -75,35 +98,94 @@
             minute: '2-digit',
             second: '2-digit',
             hour12: false
-        }).replace(/\//g, '-').replace(', ', ' ');      
+        }).replace(/\//g, '-').replace(', ', ' ');
 
-        if(current_time - lastSavedTime >= 60000){
-            //Update_Location_User(lat, lng, formattedDateISO, username);
+        if (current_time - lastSavedTime >= 60000) {
+            Update_Location_User(lat, lng, formattedDateISO, username, acc_m);
             lastSavedTime = current_time;
         }
 
-        if(marker){
-            map.removeLayer(marker);
-            map.removeLayer(circle);
+        // Menghapus marker dan circle lokasi pengguna sebelumnya
+        if (userMarker) {
+            map.removeLayer(userMarker);
+            map.removeLayer(userCircle);
         }
 
-        marker = L.marker([lat, lng], {alt:'Anda'}).addTo(map).bindPopup('Lokasi anda saat ini');
-        circle = L.circle([lat, lng], {radius: accuracy}).addTo(map);
+        // Menambahkan marker dan circle untuk lokasi pengguna
+        userMarker = L.marker([lat, lng], { alt: 'Anda' }).addTo(map).bindPopup('Lokasi anda saat ini');
+        userCircle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
 
-        if(!zoomed){
-            zoomed = map.fitBounds(circle.getBounds());
+        // Mengatur peta untuk menampilkan lokasi pengguna
+        if (!zoomed) {
+            zoomed = map.fitBounds(userCircle.getBounds());
         }
 
-        map.setView([lat,lng]);
+        map.setView([lat, lng]);
     }
 
-    function error(err){
-        if (err.code === 1){
+    // Fungsi untuk menangani error saat mengambil lokasi
+    function error(err) {
+        if (err.code === 1) {
             alert("Silahkan nyalakan lokasi anda");
-        }else{
+        } else {
             alert("Tidak dapat mengambil lokasi saat ini");
         }
     }
 
+    const friendColor = "#FF4500";
+
+    // Memulai pelacakan lokasi saat halaman dimuat
+    startGeolocationTracking();
+
+    // Menambahkan event listener untuk menghentikan pelacakan lokasi saat logout
+    document.getElementById('logout').addEventListener('click', function () {
+        stopGeolocationTracking();
+    });
+
+    // Fungsi untuk menampilkan marker teman pada peta
+    function showFriend(friends) {
+        // Menghapus semua marker teman sebelumnya
+        friendMarkers.forEach(marker => {
+            map.removeLayer(marker);
+        });
+
+        friendMarkers = []; // Reset array friendMarkers
+
+        // Menambahkan marker untuk setiap teman
+        friends.forEach(friend => {
+            const friendMarker = L.marker([friend.lat, friend.lng], {
+                icon: L.icon({
+                    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png', // Ikon default
+                    iconSize: [25, 41], // Ukuran ikon
+                    iconAnchor: [12, 41], // Titik jangkar ikon (tempat di mana ikon diposisikan pada peta)
+                    popupAnchor: [1, -34], // Lokasi popup relatif terhadap ikon
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png', // Bayangan ikon
+                    shadowSize: [41, 41] // Ukuran bayangan
+                })
+            })
+                .addTo(map)
+                .bindPopup(`${friend.name} - Last Update: ${friend.lastUpdated}`);
+
+            // Menambahkan circle dengan warna merah-orange
+            const friendCircle = L.circle([friend.lat, friend.lng], {
+                radius: friend.accuracy,
+                color: friendColor,
+                fillColor: friendColor,
+                fillOpacity: 0.5
+            }).addTo(map);
+
+            // Simpan marker dan circle teman dalam array
+            friendMarkers.push(friendMarker, friendCircle);
+        });
+    }
+    // Mendapatkan data lokasi teman dan menampilkannya pada peta
+    getFriendsLocation(username).then(friends => {
+        showFriend(friends); // Menampilkan marker teman
+    }).catch(err => {
+        alert(err);
+    });
+
 </script>
+
+
 </html>
