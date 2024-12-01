@@ -4,16 +4,131 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Friend</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f9fafb;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .add-friend-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            width: 100%;
+            max-width: 380px;
+            margin: 1rem;
+        }
+        .form-label {
+            font-weight: 600;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+        }
+        .btn-outline-secondary {
+            border: 1px solid #d1d5db;
+            color: #6b7280;
+            transition: all 0.3s ease;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #f3f4f6;
+        }
+        .text-primary {
+            color: #0d6efd !important;
+        }
+        .add-friend-container h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+            text-align: center;
+        }
+        .form-control {
+            height: 48px;
+            border-radius: 8px;
+        }
+        .form-control:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
+        }
+        
+        /* Mobile Responsiveness Improvements */
+        @media (max-width: 576px) {
+            .add-friend-container {
+                max-width: 95%;
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+            .add-friend-container h2 {
+                font-size: 1.5rem;
+            }
+            .form-control {
+                height: 44px;
+                font-size: 0.9rem;
+            }
+            .btn {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Ensure full viewport height on mobile */
+        @media (max-height: 600px) {
+            body {
+                align-items: flex-start;
+                padding-top: 2rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Silahkan cari teman anda</h1>
-    <label>Username : </label>
-    <input type="text" id="nama_teman" placeholder="Nama teman anda">
+    <div class="container">
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="add-friend-container">
+                <h2>Silahkan Cari Teman Anda</h2>
+                <div class="mb-3">
+                    <label for="nama_teman" class="form-label">Username:</label>
+                    <input 
+                    type="text" 
+                    class="form-control" 
+                    id="nama_teman" 
+                    placeholder="Nama teman anda"
+                    >
+                </div>
+                <div class="d-grid gap-2">
+                    <button 
+                    id="cari" 
+                    class="btn btn-primary"
+                    >
+                    Cari Teman
+                    </button>
+                    <button 
+                    id="back" 
+                    class="btn btn-outline-secondary"
+                    >
+                    Kembali
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <button id="cari">Cari Teman</button>
-    <br><br>
-    <button id="back">Kembali</button>
-
+    <!-- Bootstrap 5.3 JS Bundle (optional, but includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module">
         import {Back_To_Map} from './app.js';
         const username = sessionStorage.getItem("username");

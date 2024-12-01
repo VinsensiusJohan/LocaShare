@@ -33,11 +33,19 @@ function Add_User() {
     set(ref(db, 'User/' + username.value), {
         password: password.value
     }).then(() => {
-        alert("Sign Up Successfully");
         console.log("Success !");
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: 'Akun berhasil dibuat!',
+        });
     }).catch(() => {
-        alert("Error !");
         console.log(Error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Terjadi kesalahan saat membuat akun : ' + Error,
+        });
     })
 }
 
@@ -48,13 +56,21 @@ function Check_Login() {
         if (snapshot.exists()) {
             let password_db = snapshot.val().password;
             if (password.value === password_db) {
-                alert("Berhasil Login");
                 console.log("Berhasil Login");
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Login berhasil!',
+                });
                 sessionStorage.setItem("username", username.value)
                 window.location.href = 'map.html';
             }
             else {
-                alert("Wrong username or password !");
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Username atau password salah!',
+                });
                 console.log("Kesalahan data")
             }
         }
@@ -111,12 +127,20 @@ function Add_Friend() {
     const username = sessionStorage.getItem("username");
 
     if (!username) {
-        console.log("Username tidak ditemukan, pastikan user sudah login.");
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Username tidak ditemukan!',
+        });
         return;
     }
 
     if (!search_name) {
-        console.log("Elemen search_name tidak ditemukan.");
+        Swal.fire ({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Kolom pencarian tidak ditemukan!',
+        });
         return;
     }
 
@@ -124,7 +148,11 @@ function Add_Friend() {
 
     // Cek jika user mencoba berteman dengan dirinya sendiri
     if (searchNameValue === username) {
-        alert("Anda tidak bisa berteman dengan diri sendiri!");
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Tidak bisa berteman dengan diri sendiri!',
+        });
         return;
     }
 
@@ -153,19 +181,36 @@ function Add_Friend() {
                     });
 
                     console.log("Update menambah teman berhasil!");
-                    alert("Berhasil berteman dengan " + searchNameValue);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Anda berhasil berteman dengan ' + searchNameValue,
+                    });
                 } else {
-                    alert("Anda sudah berteman dengan " + searchNameValue);
+                    Swal.fire("Anda sudah berteman dengan " + searchNameValue);
                 }
             }).catch((error) => {
                 console.log("Error fetching friend data: " + error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Terjadi kesalahan saat menambahkan teman : ' + error,
+                });
             });
         } else {
-            alert("User tidak ada");
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Teman tidak ditemukan!',
+            });
         }
     }).catch((error) => {
-        alert("Error!");
         console.log("Terjadi kesalahan: " + error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Terjadi kesalahan saat mencari teman : ' + error,
+        });
     });
 }
 
@@ -205,7 +250,11 @@ export function getFriendsLocation(username) {
                     // Resolusi data setelah semua teman diproses
                     setTimeout(() => resolve(friendsData), 1000);
                 } else {
-                    reject("No friends data found");
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Tidak ada teman ditemukan!',
+                    });
                 }
             })
             .catch(err => reject(err));

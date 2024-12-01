@@ -5,187 +5,253 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Map</title>
 
-    <script src="app.js" type="module" defer></script>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-     <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <style>
+        body {
+            background-color: #f9fafb;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .map-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+        #map { 
+            height: 500px; 
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .location-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .location-info div {
+            font-size: 0.95rem;
+            color: #4b5563;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+        }
+        .btn-outline-secondary {
+            border: 1px solid #d1d5db;
+            color: #6b7280;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #f3f4f6;
+        }
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""></script>
 
-    <style>
-        #map { height: 600px; }
-    </style>
-
+    <script src="app.js" type="module" defer></script>
 </head>
-<body>
-    <h1 id="header">User Location</h1>
-    <div id="map"></div>
-    <div id="lat"></div>
-    <div id="lng"></div>
-    <div id="acc"></div>
+<body class="d-flex align-items-center justify-content-center min-vh-100">
+    <div class="container mt-3 mb-3">
+        <div class="map-container mx-auto">
+            <h2 id="header" class="text-center mb-4">User Location</h2>
+            
+            <div id="map"></div>
+            
+            <div class="location-info">
+                <div id="lat" class="mb-2">Latitude: -</div>
+                <div id="lng" class="mb-2">Longitude: -</div>
+                <div id="acc" class="mb-2">Akurasi: -</div>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button id="add_friend" class="btn btn-primary">Add Friend</button>
+                <button id="logout" class="btn btn-outline-secondary">Logout</button>
+            </div>
+        </div>
+    </div>
 
-    <button id="add_friend">Add Friend</button>
+    <!-- Bootstrap 5.3 JS Bundle (optional, but includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <br><br>
-    <button id="logout">Logout</button>
+    <script type="module">
+        import { Update_Location_User, getFriendsLocation } from './app.js';
 
-</body>
-<script type="module">
-    import { Update_Location_User, getFriendsLocation } from './app.js';
+        const username = sessionStorage.getItem("username");
 
-    const username = sessionStorage.getItem("username");
+        document.getElementById("header").innerText = username + " Location";
 
-    document.getElementById("header").innerText = username + " Location";
+        var map = L.map('map');
+        map.setView([51.505, -0.09], 13);
 
-    var map = L.map('map');
-    map.setView([51.505, -0.09], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
+        // Variable untuk menyimpan watchID
+        let watchID;
+        let userMarker, userCircle, zoomed;
+        let lastSavedTime = 0;
+        let friendMarkers = []; // Array untuk menyimpan marker teman
 
-    // Variable untuk menyimpan watchID
-    let watchID;
-    let userMarker, userCircle, zoomed;
-    let lastSavedTime = 0;
-    let friendMarkers = []; // Array untuk menyimpan marker teman
+        // Fungsi untuk memulai geolokasi tracking
+        function startGeolocationTracking() {
+            watchID = navigator.geolocation.watchPosition(success, error, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        }
 
-    // Fungsi untuk memulai geolokasi tracking
-    function startGeolocationTracking() {
-        watchID = navigator.geolocation.watchPosition(success, error, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
+        // Fungsi untuk menghentikan geolokasi tracking
+        function stopGeolocationTracking() {
+            if (watchID) {
+                navigator.geolocation.clearWatch(watchID);
+                sessionStorage.clear();
+                window.location.href = "index.html";
+                console.log("Pelacakan lokasi dihentikan.");
+            }
+        }
+
+        // Fungsi untuk meng-update lokasi pengguna
+        function success(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy;
+
+            let acc_m = accuracy.toFixed(2);
+
+            document.getElementById("lat").innerHTML = "Latitude  : " + lat + "°";
+            document.getElementById("lng").innerHTML = "Longitude : " + lng + "°";
+            document.getElementById("acc").innerHTML = "Akurasi   : " + acc_m + " meter";
+
+            const current_time = Date.now();
+            let date = new Date(current_time);
+
+            let formattedDateISO = date.toLocaleString('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(/\//g, '-').replace(', ', ' ');
+
+            if (current_time - lastSavedTime >= 60000) {
+                Update_Location_User(lat, lng, formattedDateISO, username, acc_m);
+                lastSavedTime = current_time;
+            }
+
+            // Menghapus marker dan circle lokasi pengguna sebelumnya
+            if (userMarker) {
+                map.removeLayer(userMarker);
+                map.removeLayer(userCircle);
+            }
+
+            // Menambahkan marker dan circle untuk lokasi pengguna
+            userMarker = L.marker([lat, lng], { alt: 'Anda' }).addTo(map).bindPopup('Lokasi anda saat ini');
+            userCircle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
+
+            // Mengatur peta untuk menampilkan lokasi pengguna
+            if (!zoomed) {
+                zoomed = map.fitBounds(userCircle.getBounds());
+            }
+
+            map.setView([lat, lng]);
+        }
+
+        // Fungsi untuk menangani error saat mengambil lokasi
+        function error(err) {
+            if (err.code === 1) {
+                alert("Silahkan nyalakan lokasi anda");
+            } else {
+                alert("Tidak dapat mengambil lokasi saat ini");
+            }
+        }
+
+        const friendColor = "#FF4500";
+
+        // Memulai pelacakan lokasi saat halaman dimuat
+        startGeolocationTracking();
+
+        // Menambahkan event listener untuk menghentikan pelacakan lokasi saat logout
+        document.getElementById('logout').addEventListener('click', function () {
+            stopGeolocationTracking();
         });
-    }
 
-    // Fungsi untuk menghentikan geolokasi tracking
-    function stopGeolocationTracking() {
-        if (watchID) {
-            navigator.geolocation.clearWatch(watchID);
-            sessionStorage.clear();
-            window.location.href = "index.html";
-            console.log("Pelacakan lokasi dihentikan.");
-        }
-    }
+        // Fungsi untuk menampilkan marker teman pada peta
+        function showFriend(friends) {
+            // Menghapus semua marker teman sebelumnya
+            friendMarkers.forEach(marker => {
+                map.removeLayer(marker);
+            });
 
-    // Fungsi untuk meng-update lokasi pengguna
-    function success(pos) {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const accuracy = pos.coords.accuracy;
+            friendMarkers = []; // Reset array friendMarkers
 
-        let acc_m = accuracy.toFixed(2);
-
-        document.getElementById("lat").innerHTML = "Latitude  : " + lat + "°";
-        document.getElementById("lng").innerHTML = "Longitude : " + lng + "°";
-        document.getElementById("acc").innerHTML = "Akurasi   : " + acc_m + " meter";
-
-        const current_time = Date.now();
-        let date = new Date(current_time);
-
-        let formattedDateISO = date.toLocaleString('id-ID', {
-            timeZone: 'Asia/Jakarta',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        }).replace(/\//g, '-').replace(', ', ' ');
-
-        if (current_time - lastSavedTime >= 60000) {
-            Update_Location_User(lat, lng, formattedDateISO, username, acc_m);
-            lastSavedTime = current_time;
-        }
-
-        // Menghapus marker dan circle lokasi pengguna sebelumnya
-        if (userMarker) {
-            map.removeLayer(userMarker);
-            map.removeLayer(userCircle);
-        }
-
-        // Menambahkan marker dan circle untuk lokasi pengguna
-        userMarker = L.marker([lat, lng], { alt: 'Anda' }).addTo(map).bindPopup('Lokasi anda saat ini');
-        userCircle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
-
-        // Mengatur peta untuk menampilkan lokasi pengguna
-        if (!zoomed) {
-            zoomed = map.fitBounds(userCircle.getBounds());
-        }
-
-        map.setView([lat, lng]);
-    }
-
-    // Fungsi untuk menangani error saat mengambil lokasi
-    function error(err) {
-        if (err.code === 1) {
-            alert("Silahkan nyalakan lokasi anda");
-        } else {
-            alert("Tidak dapat mengambil lokasi saat ini");
-        }
-    }
-
-    const friendColor = "#FF4500";
-
-    // Memulai pelacakan lokasi saat halaman dimuat
-    startGeolocationTracking();
-
-    // Menambahkan event listener untuk menghentikan pelacakan lokasi saat logout
-    document.getElementById('logout').addEventListener('click', function () {
-        stopGeolocationTracking();
-    });
-
-    // Fungsi untuk menampilkan marker teman pada peta
-    function showFriend(friends) {
-        // Menghapus semua marker teman sebelumnya
-        friendMarkers.forEach(marker => {
-            map.removeLayer(marker);
-        });
-
-        friendMarkers = []; // Reset array friendMarkers
-
-        // Menambahkan marker untuk setiap teman
-        friends.forEach(friend => {
-            const friendMarker = L.marker([friend.lat, friend.lng], {
-                icon: L.icon({
-                    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png', // Ikon default
-                    iconSize: [25, 41], // Ukuran ikon
-                    iconAnchor: [12, 41], // Titik jangkar ikon (tempat di mana ikon diposisikan pada peta)
-                    popupAnchor: [1, -34], // Lokasi popup relatif terhadap ikon
-                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png', // Bayangan ikon
-                    shadowSize: [41, 41] // Ukuran bayangan
+            // Menambahkan marker untuk setiap teman
+            friends.forEach(friend => {
+                const friendMarker = L.marker([friend.lat, friend.lng], {
+                    icon: L.icon({
+                        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png', // Ikon default
+                        iconSize: [25, 41], // Ukuran ikon
+                        iconAnchor: [12, 41], // Titik jangkar ikon (tempat di mana ikon diposisikan pada peta)
+                        popupAnchor: [1, -34], // Lokasi popup relatif terhadap ikon
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png', // Bayangan ikon
+                        shadowSize: [41, 41] // Ukuran bayangan
+                    })
                 })
-            })
-                .addTo(map)
-                .bindPopup(`${friend.name} - Last Update: ${friend.lastUpdated}`);
+                    .addTo(map)
+                    .bindPopup(`${friend.name} - Last Update: ${friend.lastUpdated}`);
 
-            // Menambahkan circle dengan warna merah-orange
-            const friendCircle = L.circle([friend.lat, friend.lng], {
-                radius: friend.accuracy,
-                color: friendColor,
-                fillColor: friendColor,
-                fillOpacity: 0.5
-            }).addTo(map);
+                // Menambahkan circle dengan warna merah-orange
+                const friendCircle = L.circle([friend.lat, friend.lng], {
+                    radius: friend.accuracy,
+                    color: friendColor,
+                    fillColor: friendColor,
+                    fillOpacity: 0.5
+                }).addTo(map);
 
-            // Simpan marker dan circle teman dalam array
-            friendMarkers.push(friendMarker, friendCircle);
+                // Simpan marker dan circle teman dalam array
+                friendMarkers.push(friendMarker, friendCircle);
+            });
+        }
+        // Mendapatkan data lokasi teman dan menampilkannya pada peta
+        getFriendsLocation(username).then(friends => {
+            showFriend(friends); // Menampilkan marker teman
+        }).catch(err => {
+            alert(err);
         });
-    }
-    // Mendapatkan data lokasi teman dan menampilkannya pada peta
-    getFriendsLocation(username).then(friends => {
-        showFriend(friends); // Menampilkan marker teman
-    }).catch(err => {
-        alert(err);
-    });
-
-</script>
-
-
+    </script>
+</body>
 </html>
