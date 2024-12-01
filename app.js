@@ -40,15 +40,21 @@ function showAlert(type, title, text) {
 
 
 function Add_User() {
-    set(ref(db, 'User/' + username.value), {
-        password: password.value
-    }).then(() => {
-        console.log("Success !");
-        showAlert('success', 'Berhasil!', 'Akun berhasil dibuat!');
-    }).catch((error) => {
-        console.log(error);
-        showAlert('error', 'Oops...', 'Terjadi kesalahan saat membuat akun: ' + error);
-    });
+    if (!username.value || !password.value) {
+        showAlert('error', 'Error', 'Username dan password harus diisi!');
+        return; 
+    }else{
+        set(ref(db, 'User/' + username.value), {
+            password: password.value
+        }).then(() => {
+            console.log("Success !");
+            showAlert('success', 'Berhasil!', 'Akun berhasil dibuat!');
+        }).catch((error) => {
+            console.log(error);
+            showAlert('error', 'Oops...', 'Terjadi kesalahan saat membuat akun: ' + error);
+        });
+    }
+
 }
 
 function Check_Login() {
