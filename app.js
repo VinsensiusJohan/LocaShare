@@ -29,59 +29,56 @@ let add_friend_btn = document.getElementById("add_friend");
 let to_map_btn = document.getElementById("back");
 let cari_btn = document.getElementById("cari");
 
+
+function showAlert(type, title, text) {
+    Swal.fire({
+        icon: type,
+        title: title,
+        text: text,
+    });
+}
+
+
 function Add_User() {
     set(ref(db, 'User/' + username.value), {
         password: password.value
     }).then(() => {
         console.log("Success !");
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil!',
-            text: 'Akun berhasil dibuat!',
-        });
-    }).catch(() => {
-        console.log(Error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Terjadi kesalahan saat membuat akun : ' + Error,
-        });
-    })
+        showAlert('success', 'Berhasil!', 'Akun berhasil dibuat!');
+    }).catch((error) => {
+        console.log(error);
+        showAlert('error', 'Oops...', 'Terjadi kesalahan saat membuat akun: ' + error);
+    });
 }
 
 function Check_Login() {
     const dbRef = ref(db);
+
+    if (!username.value || !password.value) {
+        showAlert('error', 'Error', 'Username dan password harus diisi!');
+        return;
+    }
 
     get(child(dbRef, 'User/' + username.value)).then((snapshot) => {
         if (snapshot.exists()) {
             let password_db = snapshot.val().password;
             if (password.value === password_db) {
                 console.log("Berhasil Login");
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil!',
-                    text: 'Login berhasil!',
-                });
-                sessionStorage.setItem("username", username.value)
+                showAlert('success', 'Berhasil!', 'Login berhasil!');
+                sessionStorage.setItem("username", username.value);
                 window.location.href = 'map.html';
+            } else {
+                showAlert('error', 'Oops...', 'Username atau password salah!');
+                console.log("Password tidak cocok");
             }
-            else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Username atau password salah!',
-                });
-                console.log("Kesalahan data")
-            }
+        } else {
+            showAlert('error', 'Error', 'Username tidak ditemukan!');
+            console.log("Username tidak ditemukan");
         }
-        else {
-            alert("Error : Something Wrong !");
-            console.log("error data");
-        }
-    }).catch(() => {
-        alert("Error !");
-        console.log(Error);
-    })
+    }).catch((error) => {
+        showAlert('error', 'Error', 'Gagal terhubung ke database: ' + error.message);
+        console.error("Database error:", error);
+    });
 }
 
 if (sign_btn) {
@@ -122,58 +119,34 @@ if (to_map_btn) {
 
 function Add_Friend() {
     const dbRef = ref(db);
-
-    // Ambil username dari sessionStorage
     const username = sessionStorage.getItem("username");
 
     if (!username) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Username tidak ditemukan!',
-        });
-        return;
+        return showAlert('error', 'Oops...', 'Username tidak ditemukan!');
     }
 
     if (!search_name) {
-        Swal.fire ({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Kolom pencarian tidak ditemukan!',
-        });
-        return;
+        return showAlert('error', 'Oops...', 'Kolom pencarian tidak ditemukan!');
     }
 
     const searchNameValue = search_name.value;
 
-    // Cek jika user mencoba berteman dengan dirinya sendiri
     if (searchNameValue === username) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Tidak bisa berteman dengan diri sendiri!',
-        });
-        return;
+        return showAlert('error', 'Oops...', 'Tidak bisa berteman dengan diri sendiri!');
     }
 
     get(child(dbRef, 'User/' + searchNameValue)).then((snapshot) => {
         if (snapshot.exists()) {
-            // Mengambil data teman pengguna (username)
             get(child(dbRef, 'friend/' + username)).then((friendSnapshot) => {
                 let friends = friendSnapshot.exists() ? friendSnapshot.val() : {};
 
-                // Jika teman belum ada, tambahkan teman baru
                 if (!friends[searchNameValue]) {
-                    friends[searchNameValue] = true; // Menambahkan teman baru
-
-                    // Update data teman untuk pengguna (A)
+                    friends[searchNameValue] = true;
                     update(ref(db, 'friend/' + username), friends);
 
-                    // Mengambil data teman untuk pengguna (B)
                     get(child(dbRef, 'friend/' + searchNameValue)).then((friendBSnapshot) => {
                         let friendsB = friendBSnapshot.exists() ? friendBSnapshot.val() : {};
 
-                        // Tambahkan username pengguna A ke teman B
                         if (!friendsB[username]) {
                             friendsB[username] = true;
                             update(ref(db, 'friend/' + searchNameValue), friendsB);
@@ -181,36 +154,20 @@ function Add_Friend() {
                     });
 
                     console.log("Update menambah teman berhasil!");
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: 'Anda berhasil berteman dengan ' + searchNameValue,
-                    });
+                    showAlert('success', 'Berhasil!', 'Anda berhasil berteman dengan ' + searchNameValue);
                 } else {
-                    Swal.fire("Anda sudah berteman dengan " + searchNameValue);
+                    showAlert('info', 'Info', 'Anda sudah berteman dengan ' + searchNameValue);
                 }
             }).catch((error) => {
                 console.log("Error fetching friend data: " + error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Terjadi kesalahan saat menambahkan teman : ' + error,
-                });
+                showAlert('error', 'Oops...', 'Terjadi kesalahan saat menambahkan teman: ' + error);
             });
         } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: 'Teman tidak ditemukan!',
-            });
+            showAlert('error', 'Oops...', 'Teman tidak ditemukan!');
         }
     }).catch((error) => {
         console.log("Terjadi kesalahan: " + error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Terjadi kesalahan saat mencari teman : ' + error,
-        });
+        showAlert('error', 'Oops...', 'Terjadi kesalahan saat mencari teman: ' + error);
     });
 }
 
@@ -223,16 +180,13 @@ export function getFriendsLocation(username) {
     const dbRef = ref(db);
 
     return new Promise((resolve, reject) => {
-        // Ambil data teman dari Firebase berdasarkan username
         get(child(dbRef, 'friend/' + username))
             .then(snapshot => {
                 if (snapshot.exists()) {
                     const friends = snapshot.val();
                     let friendsData = [];
 
-                    // Iterasi untuk setiap teman yang ada di 'friend/username'
                     Object.keys(friends).forEach(friendName => {
-                        // Ambil data lokasi teman dari path 'location/{friendName}'
                         get(child(dbRef, 'LocationUser/' + friendName)).then(locationSnapshot => {
                             if (locationSnapshot.exists()) {
                                 const locationData = locationSnapshot.val();
@@ -247,14 +201,9 @@ export function getFriendsLocation(username) {
                         }).catch(err => reject(err));
                     });
 
-                    // Resolusi data setelah semua teman diproses
                     setTimeout(() => resolve(friendsData), 1000);
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Oops...',
-                        text: 'Tidak ada teman ditemukan!',
-                    });
+                    showAlert('error', 'Oops...', 'Tidak ada teman ditemukan!');
                 }
             })
             .catch(err => reject(err));
